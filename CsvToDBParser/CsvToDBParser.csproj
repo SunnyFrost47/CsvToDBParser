@@ -87,7 +87,13 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="Models\BankAction.cs" />
+    <Compile Include="Models\BankDepartment.cs" />
     <Compile Include="Models\BankProcCSV.cs" />
+    <Compile Include="Models\BankProcess.cs" />
+    <Compile Include="Models\BankProcessContext.cs" />
+    <Compile Include="Models\BankProcType.cs" />
+    <Compile Include="Models\BankTheme.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Form1.resx">

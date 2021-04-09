@@ -76,69 +76,86 @@ namespace CsvToDBParser
             return records;
         }
 
-        private async void button1_Click(object sender, EventArgs e)
+        private void button1_Click(object sender, EventArgs e)
+        {
+            saveToDBAsync();
+        }
+
+        private async void saveToDBAsync()
         {
             string templ = comboBox2.SelectedItem.ToString();
-
             switch (templ)
             {
                 case "Процессы банка":
-                    List<string> bankDepartments = new List<string>();
-                    string patternTheme = @"^\w?[0-9]+$";
-                    string patternAction = @"^\w?[0-9]+\.[0-9]+$";
-                    string patternProcess = @"^\w?[0-9]+\.[0-9]+\.[0-9]+$";
-                    using (BankProcessContext bankProcessDB = new BankProcessContext())
+                    await Task.Run(() =>
                     {
-                        foreach (BankProcCSV bankProc in filesLoaded[templ])
+                        List<string> bankDepartments = new List<string>();
+                        string patternTheme = @"^\w?[0-9]+$";
+                        string patternAction = @"^\w?[0-9]+\.[0-9]+$";
+                        string patternProcess = @"^\w?[0-9]+\.[0-9]+\.[0-9]+$";
+                        using (BankProcessContext bankProcessDB = new BankProcessContext())
                         {
-                            if (bankProc.Department == "")
+                            BankProcType bankProcType = null;
+                            BankTheme bankTheme = null;
+                            BankAction bankAction = null;
+                            BankProcess bankProcess = null;
+                            BankDepartment bankDepartment = null;
+                            foreach (BankProcCSV bankProc in filesLoaded[templ])
                             {
-                                if (bankProc.Id == "")
+                                if (bankProc.Department == "")
                                 {
-                                    BankProcType bankProcType = new BankProcType { Name = bankProc.Name };
-                                    bankProcessDB.BankProcTypes.Add(bankProcType);
-                                }
-                                else
-                                {
-                                    if (Regex.IsMatch(bankProc.Id, patternTheme))
+                                    if (bankProc.Id == "")
                                     {
-                                        BankTheme bankTheme = new BankTheme { Name = bankProc.Name, Code = bankProc.Id };
-                                        bankProcessDB.BankThemes.Add(bankTheme);
+                                        bankProcType = new BankProcType { Name = bankProc.Name };
+                                        bankProcessDB.BankProcTypes.Add(bankProcType);
                                     }
-
-                                    if (Regex.IsMatch(bankProc.Id, patternAction))
+                                    else
                                     {
-                                        BankAction bankAction = new BankAction { Name = bankProc.Name, Code = bankProc.Id };
-                                        bankProcessDB.BankActions.Add(bankAction);
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                if (bankProc.Id != "")
-                                {
-                                    if (Regex.IsMatch(bankProc.Id, patternProcess))
-                                    {
-                                        BankProcess bankProcess = new BankProcess { Name = bankProc.Name, Code = bankProc.Id };
-                                        bankProcessDB.BankProcesses.Add(bankProcess);
-                                        if (!bankDepartments.Contains(bankProc.Department))
+                                        if (Regex.IsMatch(bankProc.Id, patternTheme))
                                         {
-                                            bankDepartments.Add(bankProc.Department);
-                                            BankDepartment bankDepartment = new BankDepartment { Name = bankProc.Department };
-                                            bankProcessDB.BankDepartments.Add(bankDepartment);
+                                            bankTheme = new BankTheme { Name = bankProc.Name, Code = bankProc.Id, BankProcType = bankProcType };
+                                            bankProcessDB.BankThemes.Add(bankTheme);
                                         }
 
+                                        if (Regex.IsMatch(bankProc.Id, patternAction))
+                                        {
+                                            bankAction = new BankAction { Name = bankProc.Name, Code = bankProc.Id, BankTheme = bankTheme };
+                                            bankProcessDB.BankActions.Add(bankAction);
+                                        }
                                     }
                                 }
                                 else
                                 {
+                                    if (bankProc.Id != "")
+                                    {
+                                        if (Regex.IsMatch(bankProc.Id, patternProcess))
+                                        {
+                                            if (!bankDepartments.Contains(bankProc.Department))
+                                            {
+                                                bankDepartments.Add(bankProc.Department);
+                                                bankDepartment = new BankDepartment { Name = bankProc.Department };
+                                                bankProcessDB.BankDepartments.Add(bankDepartment);
+                                            }
+                                            else
+                                            {
+                                                //var query = from d in bankProcessDB.BankDepartments where d.Name == bankProc.Department select d;
+                                                //bankDepartment = query.First();
+                                                bankDepartment = bankProcessDB.BankDepartments.Find(bankDepartments.IndexOf(bankProc.Department) + 1);
+                                            }
+                                            //bankDepartment = (BankDepartment)from d in bankProcessDB.BankDepartments where d.Name == bankProc.Department select d;
+                                            bankProcess = new BankProcess { Name = bankProc.Name, Code = bankProc.Id, BankAction = bankAction, BankDepartment = bankDepartment };
+                                            bankProcessDB.BankProcesses.Add(bankProcess);
+                                        }
+                                    }
+                                    else
+                                    {
 
+                                    }
                                 }
+                                bankProcessDB.SaveChanges();
                             }
-                            bankProcessDB.SaveChanges();
                         }
-                    }
-                    
+                    });
                     label6.Text = "Файл сохранен в БД";
                     break;
                 default:
@@ -146,8 +163,6 @@ namespace CsvToDBParser
                     break;
             }
         }
-
-        //private void saveToDB
 
         private void button2_Click(object sender, EventArgs e)
         {
